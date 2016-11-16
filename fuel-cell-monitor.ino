@@ -1,6 +1,3 @@
-// TODO:
-//     Allow reading values from previous recoding
-//     Prevent printing of values when trying to stop writing
 #include <EEPROM.h>
 
 // Analog in pin sensing the voltage
