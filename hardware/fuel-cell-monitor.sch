@@ -1,0 +1,181 @@
+EESchema Schematic File Version 2
+LIBS:power
+LIBS:device
+LIBS:transistors
+LIBS:conn
+LIBS:linear
+LIBS:regul
+LIBS:74xx
+LIBS:cmos4000
+LIBS:adc-dac
+LIBS:memory
+LIBS:xilinx
+LIBS:microcontrollers
+LIBS:dsp
+LIBS:microchip
+LIBS:analog_switches
+LIBS:motorola
+LIBS:texas
+LIBS:intel
+LIBS:audio
+LIBS:interface
+LIBS:digital-audio
+LIBS:philips
+LIBS:display
+LIBS:cypress
+LIBS:siliconi
+LIBS:opto
+LIBS:atmel
+LIBS:contrib
+LIBS:valves
+LIBS:arduino
+EELAYER 25 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L arduino_mini U?
+U 1 1 582C7B4C
+P 3850 2350
+F 0 "U?" H 4350 1400 70  0000 C CNN
+F 1 "arduino_mini" H 4600 1300 70  0000 C CNN
+F 2 "DIL20" H 3850 2300 60  0000 C CNN
+F 3 "" H 3850 2350 60  0001 C CNN
+	1    3850 2350
+	1    0    0    -1  
+$EndComp
+$Comp
+L CONN_01X02 P?
+U 1 1 582C7C63
+P 2100 1550
+F 0 "P?" H 2050 1750 50  0000 C CNN
+F 1 "Load" V 2200 1550 50  0000 C CNN
+F 2 "" H 2100 1550 50  0000 C CNN
+F 3 "" H 2100 1550 50  0000 C CNN
+	1    2100 1550
+	0    -1   -1   0   
+$EndComp
+$Comp
+L R R?
+U 1 1 582C7C96
+P 2050 2400
+F 0 "R?" V 2130 2400 50  0000 C CNN
+F 1 "470" V 2050 2400 50  0000 C CNN
+F 2 "" V 1980 2400 50  0000 C CNN
+F 3 "" H 2050 2400 50  0000 C CNN
+	1    2050 2400
+	1    0    0    -1  
+$EndComp
+$Comp
+L CONN_01X02 P?
+U 1 1 582C7CE4
+P 2650 1550
+F 0 "P?" H 2550 1750 50  0000 C CNN
+F 1 "Fuel cell" V 2750 1550 50  0000 C CNN
+F 2 "" H 2650 1550 50  0000 C CNN
+F 3 "" H 2650 1550 50  0000 C CNN
+	1    2650 1550
+	0    -1   -1   0   
+$EndComp
+$Comp
+L GND #PWR?
+U 1 1 582C7DE0
+P 2700 1750
+F 0 "#PWR?" H 2700 1500 50  0001 C CNN
+F 1 "GND" H 2700 1600 50  0000 C CNN
+F 2 "" H 2700 1750 50  0000 C CNN
+F 3 "" H 2700 1750 50  0000 C CNN
+	1    2700 1750
+	1    0    0    -1  
+$EndComp
+$Comp
+L GND #PWR?
+U 1 1 582C7EFA
+P 2050 2550
+F 0 "#PWR?" H 2050 2300 50  0001 C CNN
+F 1 "GND" H 2050 2400 50  0000 C CNN
+F 2 "" H 2050 2550 50  0000 C CNN
+F 3 "" H 2050 2550 50  0000 C CNN
+	1    2050 2550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3150 2250 2050 2250
+$Comp
+L GND #PWR?
+U 1 1 582C8006
+P 3850 3900
+F 0 "#PWR?" H 3850 3650 50  0001 C CNN
+F 1 "GND" H 3850 3750 50  0000 C CNN
+F 2 "" H 3850 3900 50  0000 C CNN
+F 3 "" H 3850 3900 50  0000 C CNN
+	1    3850 3900
+	1    0    0    -1  
+$EndComp
+$Comp
+L CONN_01X02 P?
+U 1 1 582C8024
+P 3650 800
+F 0 "P?" H 3650 950 50  0000 C CNN
+F 1 "Power_in" V 3750 800 50  0000 C CNN
+F 2 "" H 3650 800 50  0000 C CNN
+F 3 "" H 3650 800 50  0000 C CNN
+	1    3650 800 
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	3700 1200 3700 1000
+$Comp
+L GND #PWR?
+U 1 1 582C8090
+P 3600 1000
+F 0 "#PWR?" H 3600 750 50  0001 C CNN
+F 1 "GND" H 3600 850 50  0000 C CNN
+F 2 "" H 3600 1000 50  0000 C CNN
+F 3 "" H 3600 1000 50  0000 C CNN
+	1    3600 1000
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2050 2250 2050 1750
+Wire Wire Line
+	2600 1750 2150 1750
+Wire Wire Line
+	2600 1750 2600 2150
+Wire Wire Line
+	2600 2150 3150 2150
+$Comp
+L SW_PUSH SW?
+U 1 1 582C96D8
+P 5300 3250
+F 0 "SW?" H 5450 3360 50  0000 C CNN
+F 1 "Write_control" H 5300 3170 50  0000 C CNN
+F 2 "" H 5300 3250 50  0000 C CNN
+F 3 "" H 5300 3250 50  0000 C CNN
+	1    5300 3250
+	0    1    1    0   
+$EndComp
+$Comp
+L GND #PWR?
+U 1 1 582C975D
+P 5300 3550
+F 0 "#PWR?" H 5300 3300 50  0001 C CNN
+F 1 "GND" H 5300 3400 50  0000 C CNN
+F 2 "" H 5300 3550 50  0000 C CNN
+F 3 "" H 5300 3550 50  0000 C CNN
+	1    5300 3550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5300 2950 4550 2950
+$EndSCHEMATC

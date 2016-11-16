@@ -1,0 +1,6 @@
+## TODO
+* Allow reading values from previous recoding
+* Prevent printing of values when trying to stop writing
+* Add indicator led to hardware
+* Test that write and read of values really work
+
