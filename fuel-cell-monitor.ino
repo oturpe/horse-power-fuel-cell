@@ -1,5 +1,9 @@
 #include <EEPROM.h>
 
+// Select the appropriate config file
+#include "config-mean.h"
+//#include "config-transient.h"
+
 // Analog in pin sensing the voltage
 #define V_SENSE_PIN A0
 // Analog in pin sensing the current
@@ -9,26 +13,18 @@
 // Pin for recording indicator
 #define RECORDING_INDICATOR_PIN 5
 
-// How the control button must be pressed to register a button press
-#define BUTTON_OUTPUT_DELAY 200
-// How the control button must be pressed to start or stop writing values.
-// Given in units of millisecond
-#define BUTTON_WRITE_DELAY 2000
-
-// How many samples to average for each reading
-#define SAMPLE_COUNT 20
-// How long to wait between samples
-#define SAMPLE_INTERVAL 100
-
-// How often measurements are taken. Given in units of millisecond.
-#define MEASUREMENT_INTERVAL (2*60*1000)
-
 // Size of eeprom memory to read
 #define EEPROM_SIZE 1024
 // Marker to write for write start
 #define WRITE_START_MARK 0xff
 // Marker to write for write end
 #define WRITE_END_MARK 0xfe
+
+// How the control button must be pressed to register a button press
+#define BUTTON_OUTPUT_DELAY 200
+// How the control button must be pressed to start or stop writing values.
+// Given in units of millisecond
+#define BUTTON_WRITE_DELAY 2000
 
 bool isWriting = false;
 
