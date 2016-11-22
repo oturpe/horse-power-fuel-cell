@@ -1,4 +1,4 @@
-update=ke 16. marraskuuta 2016 16.29.02
+update=ti 22. marraskuuta 2016 14.13.58
 version=1
 last_client=kicad
 [pcbnew]
@@ -27,7 +27,7 @@ NetIExt=net
 version=1
 [eeschema]
 version=1
-LibDir=
+LibDir=../../../../../../Elektroniikka/KiCad/library/oturpe-kicad-lib;../../../../../../Elektroniikka/KiCad/library/arduino
 [eeschema/libraries]
 LibName1=power
 LibName2=device
@@ -58,4 +58,5 @@ LibName26=opto
 LibName27=atmel
 LibName28=contrib
 LibName29=valves
-LibName30=/home/otto/kicad files/arduino
+LibName30=oturpe-kicad-lib
+LibName31=arduino
