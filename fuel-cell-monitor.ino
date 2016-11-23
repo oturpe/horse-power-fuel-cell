@@ -8,8 +8,15 @@
 #define V_SENSE_PIN A0
 // Analog in pin sensing the current
 #define I_SENSE_PIN A1
+// Analog input pin for ambient light sensor
+#define AMBIENT_LIGHT_PIN A2
+
+// How many quatities are measured
+#define QUANTITY_COUNT 3
+
 // Pin for button that outputs saved readings
 #define CONTROL_BUTTON_PIN 2
+
 // Pin for recording indicator
 #define RECORDING_INDICATOR_PIN 5
 
@@ -47,6 +54,7 @@ void setup() {
 
     pinMode(V_SENSE_PIN, INPUT);
     pinMode(I_SENSE_PIN, INPUT);
+    pinMode(AMBIENT_LIGHT_PIN, INPUT);
     pinMode(CONTROL_BUTTON_PIN, INPUT_PULLUP);
     pinMode(RECORDING_INDICATOR_PIN, OUTPUT);
 }
@@ -105,24 +113,30 @@ void WriteReadings() {
 
     int voltage = 0;
     int current = 0;
+    int ambientLight = 0;
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         int voltageSample = analogRead(V_SENSE_PIN);
 	    voltage += constrain(voltageSample, 0, 0xfd);
 
-	    int currentSample = analogRead(I_SENSE_PIN);
+        int currentSample = analogRead(I_SENSE_PIN);
         current += constrain(currentSample, 0, 0xfd);
+
+        int ambientLightSample = analogRead(AMBIENT_LIGHT_PIN);
+        ambientLight += constrain(ambientLightSample, 0, 0xfd);
 
         delay(SAMPLE_INTERVAL);
     }
 
     voltage /= SAMPLE_COUNT;
     current /= SAMPLE_COUNT;
+    ambientLight /= SAMPLE_COUNT;
 
-    // TODO: Should we fit both readings into 1 byte?
-    // So 0...126 for both values?
+    // TODO: Should we fit both readings into less amount of bytes?
+    // E.g. range of 0...126 for values?
 
     EEPROM.write(writeAddress++, voltage);
     EEPROM.write(writeAddress++, current);
+    EEPROM.write(writeAddress++, ambientLight);
 }
 
 bool IsTimeToWrite(int currentTime) {
@@ -136,7 +150,7 @@ bool IsTimeToWrite(int currentTime) {
 void outputReadings() {
     Serial.begin(9600);
     Serial.println("Printing previously recorded values.");
-    Serial.println("Values given in pairs (V, I)");
+    Serial.println("Voltage (steps); Current (steps); Ambient light (steps)");
 
     int blocks = EEPROM.read(EEPROM_SIZE - 1);
     if (!blocks) {
@@ -149,9 +163,8 @@ void outputReadings() {
     int valueIndex = 0;
     int totalValues = 0;
 
-    // Prints voltage and current on the same row. Which one are we
-    // prining now?
-    bool isVoltage = true;
+    // Prints all measured quantities to one row. Which one is printed now?
+    uint8_t quantityIndex = 0;
 
     for (int address = 0; address < EEPROM_SIZE - 1; address++) {
         byte value = EEPROM.read(address);
@@ -173,21 +186,19 @@ void outputReadings() {
                 break;
             }
         }
+        else if (quantityIndex < QUANTITY_COUNT - 1) {
+            Serial.print(value, DEC);
+            Serial.print("; ");
+            valueIndex++;
+
+            quantityIndex++;
+        }
         else {
-            if (isVoltage) {
-                Serial.print(value, DEC);
-                Serial.print("; ");
-                valueIndex++;
+            Serial.print(value, DEC);
+            Serial.println();
+            valueIndex++;
 
-                isVoltage = !isVoltage;
-            }
-            else {
-                Serial.print(value, DEC);
-                Serial.println();
-                valueIndex++;
-
-                isVoltage = !isVoltage;
-            }
+            quantityIndex = 0;
         }
     }
 
