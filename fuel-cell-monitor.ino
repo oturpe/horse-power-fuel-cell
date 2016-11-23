@@ -116,13 +116,13 @@ void WriteReadings() {
     int ambientLight = 0;
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         int voltageSample = analogRead(V_SENSE_PIN);
-	    voltage += constrain(voltageSample, 0, 0xfd);
+	    voltage += map(voltageSample, 0, 0x3ff, 0, 0xfd);
 
         int currentSample = analogRead(I_SENSE_PIN);
         current += constrain(currentSample, 0, 0xfd);
 
         int ambientLightSample = analogRead(AMBIENT_LIGHT_PIN);
-        ambientLight += constrain(ambientLightSample, 0, 0xfd);
+        ambientLight += map(ambientLightSample, 0, 0x3ff, 0, 0xfd);
 
         delay(SAMPLE_INTERVAL);
     }

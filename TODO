@@ -1,5 +1,5 @@
 ## TODO
-* Increase maximum measured voltage value. E.g. by scaling instead of constraining received value to storage size.
 * Enable measurement of lower current values. For example, change the fixed resistor into trimmer and terminals allowing multimeter calibration.
 * Add lcd screen
 * Add fuel cell power output stage here?
+* Add solution pump control code
