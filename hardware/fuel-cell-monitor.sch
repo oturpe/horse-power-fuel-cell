@@ -129,7 +129,7 @@ U 1 1 5831C2A7
 P 8250 3550
 F 0 "R4" V 8330 3500 50  0000 C CNN
 F 1 "10 kA" V 8170 3610 50  0000 C CNN
-F 2 "Potentiometers:Potentiometer_Triwood_RM-065" H 8250 3550 50  0001 C CNN
+F 2 "oturpe-kicad-modules:Trimmer_ACP_*V10" H 8250 3550 50  0001 C CNN
 F 3 "" H 8250 3550 50  0000 C CNN
 	1    8250 3550
 	1    0    0    -1  
@@ -140,7 +140,7 @@ U 1 1 5831C2E4
 P 8250 4100
 F 0 "R5" V 8330 4050 50  0000 C CNN
 F 1 "1 kA" V 8170 4160 50  0000 C CNN
-F 2 "Potentiometers:Potentiometer_Triwood_RM-065" H 8250 4100 50  0001 C CNN
+F 2 "oturpe-kicad-modules:Trimmer_ACP_*V10" H 8250 4100 50  0001 C CNN
 F 3 "" H 8250 4100 50  0000 C CNN
 	1    8250 4100
 	1    0    0    -1  
@@ -415,7 +415,7 @@ U 1 1 5835B9B8
 P 4550 4350
 F 0 "RV1" H 4550 4270 50  0000 C CNN
 F 1 "10 kA" H 4550 4350 50  0000 C CNN
-F 2 "Potentiometers:Potentiometer_Triwood_RM-065" H 4550 4350 50  0001 C CNN
+F 2 "oturpe-kicad-modules:Trimmer_ACP_*V10" H 4550 4350 50  0001 C CNN
 F 3 "" H 4550 4350 50  0000 C CNN
 	1    4550 4350
 	0    1    1    0   
