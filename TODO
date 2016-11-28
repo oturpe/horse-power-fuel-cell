@@ -1,5 +1,4 @@
 ## TODO
-* Enable measurement of lower current values. For example, change the fixed resistor into trimmer and terminals allowing multimeter calibration.
-* Add lcd screen
+* Add lcd screen code
 * Add fuel cell power output stage here?
 * Add solution pump control code
