@@ -4,15 +4,17 @@
 #include "config-mean.h"
 //#include "config-transient.h"
 
-// Analog in pin sensing the voltage
+// Analog input pin sensing the voltage
 #define V_SENSE_PIN A0
-// Analog in pin sensing the current
+// Analog input pin sensing the current
 #define I_SENSE_PIN A1
 // Analog input pin for ambient light sensor
 #define AMBIENT_LIGHT_PIN A2
+// Analog input pin for opacity sensor
+#define OPACITY_PIN A3
 
 // How many quatities are measured
-#define QUANTITY_COUNT 3
+#define QUANTITY_COUNT 4
 
 // Pin for button that outputs saved readings
 #define CONTROL_BUTTON_PIN 2
@@ -55,6 +57,7 @@ void setup() {
     pinMode(V_SENSE_PIN, INPUT);
     pinMode(I_SENSE_PIN, INPUT);
     pinMode(AMBIENT_LIGHT_PIN, INPUT);
+    pinMode(OPACITY_PIN, INPUT);
     pinMode(CONTROL_BUTTON_PIN, INPUT_PULLUP);
     pinMode(RECORDING_INDICATOR_PIN, OUTPUT);
 }
@@ -97,7 +100,7 @@ void WriteStartMark() {
         return;
     }
 
-	EEPROM.write(writeAddress++, WRITE_START_MARK);
+    EEPROM.write(writeAddress++, WRITE_START_MARK);
 }
 
 void WriteEndMark() {
@@ -114,9 +117,10 @@ void WriteReadings() {
     int voltage = 0;
     int current = 0;
     int ambientLight = 0;
+    int opacity = 0;
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         int voltageSample = analogRead(V_SENSE_PIN);
-	    voltage += map(voltageSample, 0, 0x3ff, 0, 0xfd);
+        voltage += map(voltageSample, 0, 0x3ff, 0, 0xfd);
 
         int currentSample = analogRead(I_SENSE_PIN);
         current += constrain(currentSample, 0, 0xfd);
@@ -124,12 +128,16 @@ void WriteReadings() {
         int ambientLightSample = analogRead(AMBIENT_LIGHT_PIN);
         ambientLight += map(ambientLightSample, 0, 0x3ff, 0, 0xfd);
 
+        int opacitySample = analogRead(OPACITY_PIN);
+        opacity += map(opacitySample, 0, 0x3ff, 0, 0xfd);
+
         delay(SAMPLE_INTERVAL);
     }
 
     voltage /= SAMPLE_COUNT;
     current /= SAMPLE_COUNT;
     ambientLight /= SAMPLE_COUNT;
+    opacity /= SAMPLE_COUNT;
 
     // TODO: Should we fit both readings into less amount of bytes?
     // E.g. range of 0...126 for values?
@@ -137,20 +145,21 @@ void WriteReadings() {
     EEPROM.write(writeAddress++, voltage);
     EEPROM.write(writeAddress++, current);
     EEPROM.write(writeAddress++, ambientLight);
+    EEPROM.write(writeAddress++, opacity);
 }
 
 bool IsTimeToWrite(int currentTime) {
-	if (writeTime == 0) {
-	    return true;
-	}
+    if (writeTime == 0) {
+        return true;
+    }
 
-	return currentTime - writeTime > MEASUREMENT_INTERVAL;
+    return currentTime - writeTime > MEASUREMENT_INTERVAL;
 }
 
 void outputReadings() {
     Serial.begin(9600);
     Serial.println("Printing previously recorded values.");
-    Serial.println("Voltage (steps); Current (steps); Ambient light (steps)");
+    Serial.println("Voltage (steps); Current (steps); Ambient light (steps); Opacity (steps)");
 
     int blocks = EEPROM.read(EEPROM_SIZE - 1);
     if (!blocks) {
@@ -170,7 +179,7 @@ void outputReadings() {
         byte value = EEPROM.read(address);
         if (value == WRITE_START_MARK) {
             Serial.print("Printing values from recording block ");
-            Serial.println(blockIndex++, DEC);
+            Serial.println(blockIndex, DEC);
 
             totalValues += valueIndex;
             valueIndex = 0;
@@ -181,7 +190,9 @@ void outputReadings() {
             Serial.print(" contained ");
             Serial.print(valueIndex, DEC);
             Serial.println(" values");
-            
+
+            blockIndex++;
+
             if (blockIndex == blocks) {
                 break;
             }
