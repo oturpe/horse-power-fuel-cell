@@ -19,6 +19,8 @@
 // Pin for button that outputs saved readings
 #define CONTROL_BUTTON_PIN 2
 
+// Pwm output pin for solution pump
+#define SOLUTION_PUMP_PIN 6
 // Pin for recording indicator
 #define RECORDING_INDICATOR_PIN 5
 
@@ -35,6 +37,16 @@
 // Given in units of millisecond
 #define BUTTON_WRITE_DELAY 2000
 
+// How long the solution pump runs after it starts- Given in units of
+// millisecond.
+#define SOLUTION_PUMP_ON_TIME (10 * 1000)
+// How long the solution pump stays off after it stops. Givnen in units of
+// millisecond.
+#define SOLUTION_PUMP_OFF_TIME (10 * 1000)
+// Duty cycle of pwm used for the solution pump. Range is 0 .. 0xff for
+// 0 % .. 100 %.
+#define SOLUTION_PUMP_PWM_DUTY_CYCLE 230
+
 bool isWriting = false;
 
 // Eeprom address to write
@@ -44,9 +56,14 @@ int writeAddress = 0;
 bool wasButtonDown = false;
 
 // The moment of time when button went down
-int buttonDownTime = 0;
+unsigned long buttonDownTime = 0;
 // The moment values were last written
-int writeTime = 0;
+unsigned long writeTime = 0;
+
+// If solution pump is running
+bool isSolutionPumpRunning = false;
+// When solution pump was started or stopped the last time
+unsigned long solutionPumpChangeTime = 0;
 
 // How many blocks have been written
 int blocksWritten = 0;
@@ -59,11 +76,14 @@ void setup() {
     pinMode(AMBIENT_LIGHT_PIN, INPUT);
     pinMode(OPACITY_PIN, INPUT);
     pinMode(CONTROL_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(SOLUTION_PUMP_PIN, OUTPUT);
     pinMode(RECORDING_INDICATOR_PIN, OUTPUT);
+
+    analogWrite(SOLUTION_PUMP_PIN, 0);
 }
 
 void loop() {
-    int currentTime = millis();
+    unsigned long currentTime = millis();
     
     bool isButtonDown = digitalRead(CONTROL_BUTTON_PIN) == LOW; 
 
@@ -93,6 +113,8 @@ void loop() {
         WriteReadings();
         writeTime = currentTime;
     }
+
+    NotifySolutionPumpTimer(currentTime);
 }
 
 void WriteStartMark() {
@@ -110,7 +132,7 @@ void WriteEndMark() {
 
 void WriteReadings() {
     // Last bit is amount of blocks
-    if (writeAddress == EEPROM_SIZE -1) {
+    if (writeAddress == EEPROM_SIZE - 1) {
         return;
     }
 
@@ -148,12 +170,12 @@ void WriteReadings() {
     EEPROM.write(writeAddress++, opacity);
 }
 
-bool IsTimeToWrite(int currentTime) {
+bool IsTimeToWrite(unsigned long currentTime) {
     if (writeTime == 0) {
         return true;
     }
 
-    return currentTime - writeTime > MEASUREMENT_INTERVAL;
+    return currentTime > writeTime + MEASUREMENT_INTERVAL;
 }
 
 void outputReadings() {
@@ -223,5 +245,24 @@ void outputReadings() {
     Serial.end();
 }
 
-void outputBlockEndMark(int blockIndex, int valueIndex) {
+void NotifySolutionPumpTimer(unsigned long currentTime) {
+    if (
+        isSolutionPumpRunning
+        && currentTime > solutionPumpChangeTime + SOLUTION_PUMP_ON_TIME
+    ) {
+        analogWrite(SOLUTION_PUMP_PIN, 0);
+        ChangeSolutionPumpState(currentTime);
+    }
+    else if (
+        !isSolutionPumpRunning
+        && currentTime > solutionPumpChangeTime + SOLUTION_PUMP_OFF_TIME
+    ) {
+        analogWrite(SOLUTION_PUMP_PIN, SOLUTION_PUMP_PWM_DUTY_CYCLE);
+        ChangeSolutionPumpState(currentTime);
+    }
+}
+
+void ChangeSolutionPumpState(unsigned long currentTime) {
+    isSolutionPumpRunning = !isSolutionPumpRunning;
+    solutionPumpChangeTime = currentTime;
 }
