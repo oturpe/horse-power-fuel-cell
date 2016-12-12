@@ -1,28 +1,30 @@
 #include <EEPROM.h>
 
 // Select the appropriate config file
-#include "config-mean.h"
-//#include "config-transient.h"
+//#include "config-mean.h"
+#include "config-transient.h"
 
 // Analog input pin sensing the voltage
-#define V_SENSE_PIN A0
+#define V_SENSE_PIN A4
 // Analog input pin sensing the current
-#define I_SENSE_PIN A1
+#define I_SENSE_PIN A3
 // Analog input pin for ambient light sensor
-#define AMBIENT_LIGHT_PIN A2
+#define AMBIENT_LIGHT_PIN A7
 // Analog input pin for opacity sensor
-#define OPACITY_PIN A3
+#define OPACITY_PIN A2
+// Analog input pin for temperature sensor
+#define TEMPERATURE_PIN A6
 
 // How many quatities are measured
-#define QUANTITY_COUNT 4
+#define QUANTITY_COUNT 5
 
 // Pin for button that outputs saved readings
-#define CONTROL_BUTTON_PIN 2
+#define CONTROL_BUTTON_PIN A5
 
 // Pwm output pin for solution pump
-#define SOLUTION_PUMP_PIN 6
+#define SOLUTION_PUMP_PIN 11
 // Pin for recording indicator
-#define RECORDING_INDICATOR_PIN 5
+#define RECORDING_INDICATOR_PIN A1
 
 // Size of eeprom memory to read
 #define EEPROM_SIZE 1024
@@ -45,7 +47,7 @@
 #define SOLUTION_PUMP_OFF_TIME (10 * 1000)
 // Duty cycle of pwm used for the solution pump. Range is 0 .. 0xff for
 // 0 % .. 100 %.
-#define SOLUTION_PUMP_PWM_DUTY_CYCLE 230
+#define SOLUTION_PUMP_PWM_DUTY_CYCLE 170
 
 bool isWriting = false;
 
@@ -75,6 +77,7 @@ void setup() {
     pinMode(I_SENSE_PIN, INPUT);
     pinMode(AMBIENT_LIGHT_PIN, INPUT);
     pinMode(OPACITY_PIN, INPUT);
+    pinMode(TEMPERATURE_PIN, INPUT);
     pinMode(CONTROL_BUTTON_PIN, INPUT_PULLUP);
     pinMode(SOLUTION_PUMP_PIN, OUTPUT);
     pinMode(RECORDING_INDICATOR_PIN, OUTPUT);
@@ -140,6 +143,7 @@ void WriteReadings() {
     int current = 0;
     int ambientLight = 0;
     int opacity = 0;
+    int temperature = 0;
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         int voltageSample = analogRead(V_SENSE_PIN);
         voltage += map(voltageSample, 0, 0x3ff, 0, 0xfd);
@@ -153,6 +157,9 @@ void WriteReadings() {
         int opacitySample = analogRead(OPACITY_PIN);
         opacity += map(opacitySample, 0, 0x3ff, 0, 0xfd);
 
+        int temperatureSample = analogRead(TEMPERATURE_PIN);
+        temperature += map(temperatureSample, 0, 0x3ff, 0, 0xfd);
+
         delay(SAMPLE_INTERVAL);
     }
 
@@ -160,6 +167,7 @@ void WriteReadings() {
     current /= SAMPLE_COUNT;
     ambientLight /= SAMPLE_COUNT;
     opacity /= SAMPLE_COUNT;
+    temperature /= SAMPLE_COUNT;
 
     // TODO: Should we fit both readings into less amount of bytes?
     // E.g. range of 0...126 for values?
@@ -168,6 +176,7 @@ void WriteReadings() {
     EEPROM.write(writeAddress++, current);
     EEPROM.write(writeAddress++, ambientLight);
     EEPROM.write(writeAddress++, opacity);
+    EEPROM.write(writeAddress++, temperature);
 }
 
 bool IsTimeToWrite(unsigned long currentTime) {
@@ -181,7 +190,7 @@ bool IsTimeToWrite(unsigned long currentTime) {
 void outputReadings() {
     Serial.begin(9600);
     Serial.println("Printing previously recorded values.");
-    Serial.println("Voltage (steps); Current (steps); Ambient light (steps); Opacity (steps)");
+    Serial.println("Voltage (steps); Current (steps); Ambient light (steps); Opacity (steps); Temperature (steps)");
 
     int blocks = EEPROM.read(EEPROM_SIZE - 1);
     if (!blocks) {

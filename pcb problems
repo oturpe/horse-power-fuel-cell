@@ -1,0 +1,6 @@
+* arduino is facing wrong direction. the usb interface should be by the side of the board
+* holes for block terminals are too small
+* block terminal individual holes are not marked
+* block terminal names should appear by the side of pcb, for easier reading when connecting
+
+* should there be a capacitor at 12 V input? Without it, from a battery, the microcontroller goes down when solution pump starts
