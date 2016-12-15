@@ -32,6 +32,8 @@
 // Liquid crystal display reset pin
 #define SCREEN_RESET_PIN 12
 
+#include "screen.h"
+
 // How many quatities are measured
 #define QUANTITY_COUNT 5
 
@@ -67,31 +69,90 @@
 #define SOLUTION_PUMP_PWM_DUTY_CYCLE 170
 
 // How often something is written to screen. Given in units of millisecond
-#define SCREEN_UPDATE_PERIOD 100
+#define SCREEN_UPDATE_PERIOD 250
 
-// Number of columns in the screen controller.
-#define SCREEN_COLUMN_COUNT 61
-// Number of pages in the screen controller.
-#define SCREEN_PAGE_COUNT 4
-// Number of chips in the screen controller.
-#define SCREEN_CHIP_COUNT 2
+enum MeasuredQuantity {
+    VOLTAGE = 0,
+    CURRENT = 1,
+    AMBIENT_LIGHT = 2,
+    OPACITY = 3,
+    TEMPERATURE =4
+};
 
-/// WG12232 command codes
-#define SCREEN_CMD_RMW       0xE0
-#define SCREEN_CMD_END_RMW   0xEE
-#define SCREEN_CMD_SOFT_RST  0xE2
+char * quantityName(uint8_t quantityIndex) {
+    MeasuredQuantity quantity = (MeasuredQuantity)quantityIndex;
 
-#define SCREEN_CMD_DISP_ON   0xAF
-#define SCREEN_CMD_DISP_OFF  0xAE
+    switch (quantity) {
+    case VOLTAGE:
+        return "Voltage";
+    case CURRENT:
+        return "Current";
+    case AMBIENT_LIGHT:
+        return "Ambient light";
+    case OPACITY:
+        return "Opacity";
+    case TEMPERATURE:
+        return "Temperature";
+    }
+}
 
-#define SCREEN_CMD_MAP_SEG   0xA0
+char * quantityUnit(uint8_t quantityIndex) {
+    MeasuredQuantity quantity = (MeasuredQuantity)quantityIndex;
 
-#define SCREEN_CMD_SET_SDL   0xC0
-#define SCREEN_CMD_SEL_PAGE  0xB8
-#define SCREEN_CMD_SEL_COL   0
+    switch (quantity) {
+    case VOLTAGE:
+        return "mV";
+    case CURRENT:
+        return "uA";
+    case AMBIENT_LIGHT:
+        return "lux";
+    case OPACITY:
+        return "units";
+    case TEMPERATURE:
+        return "C";
+    }
+}
 
-#define SCREEN_DTM_RW_BIT    2
-#define SCREEN_DTM_CD_BIT    1
+uint32_t quantityInUnits(uint8_t quantityIndex, uint8_t steps) {
+    MeasuredQuantity quantity = (MeasuredQuantity)quantityIndex;
+
+    switch(quantity) {
+    case VOLTAGE:
+        // Return millivolts based on using internal voltage refernce.
+        return map(steps, 0, 0xfe, 0, 1100);
+    case CURRENT:
+        // Return microamperes based on using 47 kiloohm load and 1 kilo sense resistance
+        return map(steps, 0, 0xfe, 0, 1100);
+    case AMBIENT_LIGHT:
+        return steps;
+    case OPACITY:
+        return steps;
+    case TEMPERATURE:
+        return 0.25*steps;
+    }
+}
+
+uint8_t nextQuantityIndex(uint8_t quantityIndex) {
+    MeasuredQuantity quantity = (MeasuredQuantity)quantityIndex;
+
+    switch (quantity) {
+    case VOLTAGE:
+        return CURRENT;
+    case CURRENT:
+        return AMBIENT_LIGHT;
+    case AMBIENT_LIGHT:
+        return OPACITY;
+    case OPACITY:
+        return TEMPERATURE;
+    case TEMPERATURE:
+        return VOLTAGE;
+    }
+}
+
+// In-memory storage of latest readings.
+uint8_t readings[QUANTITY_COUNT][SCREEN_DIMENSION_WIDTH];
+// Pointer to the next reading to write.
+uint8_t nextReadingIndex = 0;
 
 bool isWriting = false;
 
@@ -105,6 +166,8 @@ bool wasButtonDown = false;
 unsigned long buttonDownTime = 0;
 // The moment values were last written
 unsigned long writeTime = 0;
+// The moment when reading were last collected
+unsigned long lastReadingTime = 0;
 
 // If solution pump is running
 bool isSolutionPumpRunning = false;
@@ -114,16 +177,6 @@ unsigned long solutionPumpChangeTime = 0;
 // How many blocks have been written
 int blocksWritten = 0;
 
-// Current start Display Line of the screen
-uint8_t screenStartDisplayLine;
-// Current Column Address of the screen
-uint8_t currentScreenColumn = 0;
-// Current Page Address of the screen
-uint8_t currentScreenPage = 0;
-// Current chip of the screen
-uint8_t currentScreenChip = 0;
-// Enable pin of the current chip
-uint8_t currentScreenChipPin;
 // The last time the screen was updated. Given in units of millisecond
 unsigned long screenLastUpdateTime = 0;
 
@@ -153,133 +206,9 @@ void setup() {
     pinMode(SCREEN_DB6_PIN, OUTPUT);
     pinMode(SCREEN_DB7_PIN, OUTPUT);
 
-    delay(10);
-    // Initialization code adapted from the display's datasheet
-    digitalWrite(SCREEN_RESET_PIN, LOW);
-    delay(10);
-    digitalWrite(SCREEN_RESET_PIN, HIGH);
-    delay(10);
-    screenEndRmw();
-    setScreenStartDisplayLine(0);
-    displayOn();
-    screenSelectChip(currentScreenChip);
-    screenSelectPage(currentScreenPage);
+    initializeScreen();
 
     analogWrite(SOLUTION_PUMP_PIN, 0);
-}
-
-void screenCommand(uint8_t command) {
-    digitalWrite(SCREEN_ENABLE1_PIN, HIGH);
-    digitalWrite(SCREEN_ENABLE2_PIN, HIGH);
-    // Set command mode
-    digitalWrite(SCREEN_DC_PIN, LOW);
-    delayMicroseconds(10);
-    setScreenDataBits(command);
-    digitalWrite(SCREEN_ENABLE1_PIN, LOW);
-    digitalWrite(SCREEN_ENABLE2_PIN, LOW);
-}
-
-void writeScreenData(uint8_t character) {
-    // Set data mode
-    digitalWrite(currentScreenChipPin, HIGH);
-    digitalWrite(SCREEN_DC_PIN, HIGH);
-    // ???
-    delayMicroseconds(10);
-    setScreenDataBits(character);
-    digitalWrite(currentScreenChipPin, LOW);
-}
-
-void setScreenDataBits(uint8_t bits) {
-    digitalWrite(SCREEN_DB0_PIN, bits & 0x01);
-    digitalWrite(SCREEN_DB1_PIN, bits & 0x02);
-    digitalWrite(SCREEN_DB2_PIN, bits & 0x04);
-    digitalWrite(SCREEN_DB3_PIN, bits & 0x08);
-    digitalWrite(SCREEN_DB4_PIN, bits & 0x10);
-    digitalWrite(SCREEN_DB5_PIN, bits & 0x20);
-    digitalWrite(SCREEN_DB6_PIN, bits & 0x40);
-    digitalWrite(SCREEN_DB7_PIN, bits & 0x80);
-}
-
-/**
- * To switch display on for currently selected chip.
- */
-inline void displayOn() {
-    screenCommand(SCREEN_CMD_DISP_ON);
-}
-
-/**
- * To set Start Display Line.
- * \param line Start Display Line number (0..31).
- */
-inline void setScreenStartDisplayLine(uint8_t line) {
-    // TODO: How to save the line?
-    screenStartDisplayLine = line;
-    screenCommand(SCREEN_CMD_SET_SDL + line);
-}
-
-/**
- * To start Read/Modify/Write sequence.
- */
-inline void screenBeginRmw() {
-    screenCommand(SCREEN_CMD_RMW);
-}
-
-/**
- * To finish Read/Modify/Write sequence.
- */
-inline void screenEndRmw() {
-    screenCommand(SCREEN_CMD_END_RMW);
-}
-
-
-/**
- * To select page. 32 lines are segmented for 4 pages 8 lines each.
- * \param line Page number (0..3).
- */
-inline void screenSelectPage(uint8_t page) {
-    screenCommand(SCREEN_CMD_SEL_PAGE + page);
-}
-
-/**
- * Select the given chip for screen.
- */
-inline void screenSelectChip(uint8_t chip) {
-    switch (chip) {
-    case 0:
-        currentScreenChipPin = SCREEN_ENABLE1_PIN;
-        break;
-    case 1:
-        currentScreenChipPin = SCREEN_ENABLE2_PIN;
-        break;
-    }
-}
-
-/**
- * To select column. 122 columns are controled by 2 chips 61 column each.
- * \param line Column number (0..60).
- */
-inline void screenSelectColumn(uint8_t col) {
-    screenCommand(SCREEN_CMD_SEL_COL + col);
-}
-
-inline static uint8_t screenColumnFromX(uint8_t x) {
-    return (x > 60) ? x-61 : x;
-}
-
-uint8_t screenPageFromY(uint8_t y)
-{
-  uint8_t line = screenStartDisplayLine + y;
-  if(line > 31)
-    line -= 32;
-  return line / 8;
-}
-
-uint8_t screenBitFromY(uint8_t y)
-{
-  uint8_t line = screenStartDisplayLine + y;
-  if(line > 31)
-    line -= 32;
-  return line % 8;
 }
 
 void loop() {
@@ -309,7 +238,12 @@ void loop() {
     wasButtonDown = isButtonDown;
 
     digitalWrite(RECORDING_INDICATOR_PIN, isWriting);
-    if (isWriting && IsTimeToWrite(currentTime)) {
+
+    if (currentTime > lastReadingTime + SCREEN_UPDATE_PERIOD) {
+        collectReadings();
+        lastReadingTime = currentTime;
+    }
+    if (isWriting && isTimeToWrite(currentTime)) {
         WriteReadings();
         writeTime = currentTime;
     }
@@ -331,17 +265,13 @@ void WriteEndMark() {
     EEPROM.write(EEPROM_SIZE - 1, ++blocksWritten);
 }
 
-void WriteReadings() {
-    // Last bit is amount of blocks
-    if (writeAddress == EEPROM_SIZE - 1) {
-        return;
-    }
-
+void collectReadings() {
     int voltage = 0;
     int current = 0;
     int ambientLight = 0;
     int opacity = 0;
     int temperature = 0;
+
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         int voltageSample = analogRead(V_SENSE_PIN);
         voltage += map(voltageSample, 0, 0x3ff, 0, 0xfd);
@@ -361,28 +291,37 @@ void WriteReadings() {
         delay(SAMPLE_INTERVAL);
     }
 
-    voltage /= SAMPLE_COUNT;
-    current /= SAMPLE_COUNT;
-    ambientLight /= SAMPLE_COUNT;
-    opacity /= SAMPLE_COUNT;
-    temperature /= SAMPLE_COUNT;
+    readings[(int)VOLTAGE][nextReadingIndex] = voltage / SAMPLE_COUNT;
+    readings[(int)CURRENT][nextReadingIndex] = current / SAMPLE_COUNT;
+    readings[(int)AMBIENT_LIGHT][nextReadingIndex] = ambientLight / SAMPLE_COUNT;
+    readings[(int)OPACITY][nextReadingIndex] = opacity / SAMPLE_COUNT;
+    readings[(int)TEMPERATURE][nextReadingIndex] = temperature / SAMPLE_COUNT;
+
+    nextReadingIndex = (nextReadingIndex + 1) % SCREEN_DIMENSION_WIDTH;
+}
+
+void WriteReadings() {
+    // Last bit is amount of blocks
+    if (writeAddress == EEPROM_SIZE - 1) {
+        return;
+    }
 
     // TODO: Should we fit both readings into less amount of bytes?
     // E.g. range of 0...126 for values?
 
-    EEPROM.write(writeAddress++, voltage);
-    EEPROM.write(writeAddress++, current);
-    EEPROM.write(writeAddress++, ambientLight);
-    EEPROM.write(writeAddress++, opacity);
-    EEPROM.write(writeAddress++, temperature);
+    EEPROM.write(writeAddress++, readings[(int)VOLTAGE][nextReadingIndex - 1]);
+    EEPROM.write(writeAddress++, readings[(int)CURRENT][nextReadingIndex - 1]);
+    EEPROM.write(writeAddress++, readings[(int)AMBIENT_LIGHT][nextReadingIndex - 1]);
+    EEPROM.write(writeAddress++, readings[(int)OPACITY][nextReadingIndex - 1]);
+    EEPROM.write(writeAddress++, readings[(int)TEMPERATURE][nextReadingIndex - 1]);
 }
 
-bool IsTimeToWrite(unsigned long currentTime) {
+bool isTimeToWrite(unsigned long currentTime) {
     if (writeTime == 0) {
         return true;
     }
 
-    return currentTime > writeTime + MEASUREMENT_INTERVAL;
+    return currentTime > writeTime + MEASUREMENT_WRITE_INTERVAL;
 }
 
 void outputReadings() {
@@ -472,24 +411,86 @@ void NotifySolutionPumpTimer(unsigned long currentTime) {
 // TODO: Implement writing something sensible to screen.
 uint8_t currentScreenByte = 0;
 
-void NotifyScreen(unsigned long currentTime) {
-//    if (currentTime <= screenLastUpdateTime + SCREEN_UPDATE_PERIOD) {
-//        return;
-//    }
-//    screenLastUpdateTime = currentTime;
+char * text = "Horse Power";
+uint8_t textIndex = 0;
+MeasuredQuantity currentScreenQuantity = VOLTAGE;
 
-    writeScreenData(currentScreenByte);
-    currentScreenByte = currentScreenByte + 1;
-    currentScreenColumn = (currentScreenColumn + 1) % SCREEN_COLUMN_COUNT;
-    if (currentScreenColumn == 0) {
-        screenSelectColumn(0);
-        currentScreenPage = (currentScreenPage + 1) % SCREEN_PAGE_COUNT;
-        screenSelectPage(currentScreenPage);
-        if (currentScreenPage == 0) {
-            currentScreenChip = (currentScreenChip + 1) % SCREEN_CHIP_COUNT;
-            screenSelectChip(currentScreenChip);
+void printMeasurementHeader() {
+    char * text = quantityName(currentScreenQuantity);
+    while(*text) {
+        writeScreenCharacter(*text);
+        text++;
+    }
+
+    writeScreenCharacter(' ');
+    uint8_t reading = readings[(int)currentScreenQuantity][nextReadingIndex - 1];
+    String numberString(quantityInUnits(currentScreenQuantity, reading));
+    char * number = (char *)numberString.c_str();
+    while (*number) {
+        writeScreenCharacter(*number);
+        number++;
+    }
+    writeScreenCharacter(' ');
+
+    text = quantityUnit(currentScreenQuantity);
+    while(*text) {
+        writeScreenCharacter(*text);
+        text++;
+    }
+}
+
+void printMeasurementGraph() {
+    for (int chip = 0; chip < SCREEN_CHIP_COUNT; chip++) {
+        currentScreenChip = chip;
+        screenSelectChip(currentScreenChip);
+        for (int column = 0; column < SCREEN_COLUMN_COUNT; column++) {
+            currentScreenColumn = column;
+            screenSelectColumn(currentScreenColumn);
+            for (int page = 1; page < SCREEN_PAGE_COUNT; page++) {
+                currentScreenPage = page;
+                screenSelectPage(currentScreenPage);
+
+                uint8_t pixelColumn = (chip * SCREEN_COLUMN_COUNT) + column;
+                uint8_t columnReadingIndex = nextReadingIndex;
+                columnReadingIndex += pixelColumn;
+                columnReadingIndex %= SCREEN_DIMENSION_WIDTH;
+                uint8_t reading = readings[(int)currentScreenQuantity][columnReadingIndex];
+                uint8_t graphHeight = map(reading, 0, 0xfd, 0, 23);
+                uint8_t pageGraphStart = (3 - page) * 8;
+                if (
+                    (graphHeight < pageGraphStart)
+                    || (graphHeight >= pageGraphStart + 8)
+                ) {
+                    writeScreenData(0x00);
+                }
+                else {
+                    graphHeight -= pageGraphStart;
+                    writeScreenData(1 << (7 - graphHeight));
+                }
+            }
         }
     }
+}
+
+void NotifyScreen(unsigned long currentTime) {
+    if (currentTime <= screenLastUpdateTime + SCREEN_UPDATE_PERIOD) {
+        return;
+    }
+    screenLastUpdateTime = currentTime;
+
+    currentScreenQuantity = (MeasuredQuantity)nextQuantityIndex(currentScreenQuantity);
+
+    // Clear and start from the beginning of screen
+    clearScreen();
+    currentScreenColumn = 0;
+    screenSelectColumn(currentScreenColumn);
+    currentScreenPage = 0;
+    screenSelectPage(currentScreenPage);
+    currentScreenChip = 0;
+    screenSelectChip(currentScreenChip);
+
+    printMeasurementHeader();
+    printMeasurementGraph();
 }
 
 void ChangeSolutionPumpState(unsigned long currentTime) {
