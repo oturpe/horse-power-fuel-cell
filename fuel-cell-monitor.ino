@@ -69,7 +69,7 @@
 #define SOLUTION_PUMP_PWM_DUTY_CYCLE 170
 
 // How often something is written to screen. Given in units of millisecond
-#define SCREEN_UPDATE_PERIOD 250
+#define SCREEN_UPDATE_PERIOD (5 * 1000L)
 
 enum MeasuredQuantity {
     VOLTAGE = 0,
@@ -207,6 +207,7 @@ void setup() {
     pinMode(SCREEN_DB7_PIN, OUTPUT);
 
     initializeScreen();
+    //screenSetMapping(SCREEN_SEGMAP_INVERT);
 
     analogWrite(SOLUTION_PUMP_PIN, 0);
 }
@@ -440,23 +441,25 @@ void printMeasurementHeader() {
 }
 
 void printMeasurementGraph() {
-    for (int chip = 0; chip < SCREEN_CHIP_COUNT; chip++) {
+    for (int chip = SCREEN_CHIP_COUNT - 1; chip >= 0; chip--) {
         currentScreenChip = chip;
         screenSelectChip(currentScreenChip);
-        for (int column = 0; column < SCREEN_COLUMN_COUNT; column++) {
+        for (int column = SCREEN_INVERTED_FIRST_COLUMN; column < SCREEN_COLUMN_COUNT + SCREEN_INVERTED_FIRST_COLUMN; column++) {
             currentScreenColumn = column;
             screenSelectColumn(currentScreenColumn);
-            for (int page = 1; page < SCREEN_PAGE_COUNT; page++) {
+            for (int page = 2; page >= 0; page--) {
                 currentScreenPage = page;
                 screenSelectPage(currentScreenPage);
 
-                uint8_t pixelColumn = (chip * SCREEN_COLUMN_COUNT) + column;
+                uint8_t pixelColumn = column - SCREEN_INVERTED_FIRST_COLUMN;
+                pixelColumn += (chip == 0) ? SCREEN_COLUMN_COUNT : 0;
                 uint8_t columnReadingIndex = nextReadingIndex;
                 columnReadingIndex += pixelColumn;
                 columnReadingIndex %= SCREEN_DIMENSION_WIDTH;
+
                 uint8_t reading = readings[(int)currentScreenQuantity][columnReadingIndex];
                 uint8_t graphHeight = map(reading, 0, 0xfd, 0, 23);
-                uint8_t pageGraphStart = (3 - page) * 8;
+                uint8_t pageGraphStart = page * 8;
                 if (
                     (graphHeight < pageGraphStart)
                     || (graphHeight >= pageGraphStart + 8)
@@ -465,7 +468,7 @@ void printMeasurementGraph() {
                 }
                 else {
                     graphHeight -= pageGraphStart;
-                    writeScreenData(1 << (7 - graphHeight));
+                    writeScreenData(1 << graphHeight);
                 }
             }
         }
@@ -482,11 +485,11 @@ void NotifyScreen(unsigned long currentTime) {
 
     // Clear and start from the beginning of screen
     clearScreen();
-    currentScreenColumn = 0;
+    currentScreenColumn = SCREEN_INVERTED_FIRST_COLUMN;
     screenSelectColumn(currentScreenColumn);
-    currentScreenPage = 0;
+    currentScreenPage = 3;
     screenSelectPage(currentScreenPage);
-    currentScreenChip = 0;
+    currentScreenChip = 1;
     screenSelectChip(currentScreenChip);
 
     printMeasurementHeader();
