@@ -124,7 +124,7 @@ uint32_t quantityInUnits(uint8_t quantityIndex, uint8_t steps) {
         // Return microamperes based on using 47 kiloohm load and 1 kilo sense resistance
         return map(steps, 0, 0xfe, 0, 1100);
     case AMBIENT_LIGHT:
-        return steps;
+        return map(steps, 0, 0xfe, 0, 1000);
     case OPACITY:
         return steps;
     case TEMPERATURE:
