@@ -60,7 +60,7 @@
 
 // How long the solution pump runs after it starts- Given in units of
 // millisecond.
-#define SOLUTION_PUMP_ON_TIME (10 * 1000)
+#define SOLUTION_PUMP_ON_TIME (5 * 1000)
 // How long the solution pump stays off after it stops. Givnen in units of
 // millisecond.
 #define SOLUTION_PUMP_OFF_TIME (10 * 1000)
