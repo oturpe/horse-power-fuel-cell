@@ -1,8 +1,8 @@
 #include <EEPROM.h>
 
 // Select the appropriate config file
-//#include "config-mean.h"
-#include "config-transient.h"
+#include "config-mean.h"
+//#include "config-transient.h"
 
 // Analog input pin sensing the voltage
 #define V_SENSE_PIN A4

@@ -7,4 +7,4 @@
 #define SAMPLE_INTERVAL 100
 
 // How often measurements are taken. Given in units of millisecond.
-#define MEASUREMENT_WRITE_INTERVAL (2*60*1000)
+#define MEASUREMENT_WRITE_INTERVAL (60*60*1000L)
